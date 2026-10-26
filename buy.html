@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Bitcoin Gift Card — AfriBit Cards</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">₿</div>
+        AfriBit Cards
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="buy.html" class="active">Buy Card</a>
+        <a href="how-it-works.html">How It Works</a>
+        <a href="faq.html">FAQ</a>
+        <a href="my-cards.html">My Cards</a>
+        <a href="buy.html" class="btn btn-primary">Get Started</a>
+      </div>
+      <button class="mobile-toggle">☰</button>
+    </div>
+  </nav>
+
+  <section class="section" style="padding-top: 48px;">
+    <div class="container">
+      <div class="section-header" style="margin-bottom: 40px;">
+        <h2>Buy a Bitcoin Gift Card</h2>
+        <p>Select your currency and amount. Pay with local methods and get an instant redeemable code.</p>
+      </div>
+
+      <div class="buy-layout">
+        <!-- Form -->
+        <div class="buy-card">
+          <h2>Card Details</h2>
+          <p class="subtitle">Supported in Flutterwave & Paystack markets</p>
+
+          <div class="form-group">
+            <label for="currency">Currency</label>
+            <select id="currency" class="form-control">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Select Amount</label>
+            <div class="amount-grid" id="amountGrid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="customAmount">Or enter custom amount</label>
+            <input type="number" id="customAmount" class="form-control" placeholder="Enter amount" min="1">
+          </div>
+
+          <div class="gift-preview">
+            <div class="brand">
+              <span>₿</span> AfriBit Gift Card
+            </div>
+            <div class="amount" id="previewAmount">₦ 10,000</div>
+            <div class="currency" id="previewCurrency">Nigerian Naira</div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-card">
+          <h3>Order Summary</h3>
+          <div class="summary-row">
+            <span>Card Value</span>
+            <span class="value" id="sumAmount">—</span>
+          </div>
+          <div class="summary-row">
+            <span>Service Fee (~1.5%)</span>
+            <span class="value" id="sumFee">—</span>
+          </div>
+          <div class="summary-row total">
+            <span>Total to Pay</span>
+            <span class="value" id="sumTotal">—</span>
+          </div>
+          <div class="summary-row" style="margin-top: 12px;">
+            <span style="color: var(--text-muted);">Estimated BTC</span>
+            <span id="sumBtc" style="color: var(--success);">—</span>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg mt-6" onclick="openPaymentModal()">
+            Proceed to Payment
+          </button>
+
+          <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 16px;">
+            Powered by Flutterwave-style local payments (demo)
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal">
+      <!-- Step 1: Payment -->
+      <div id="paymentStep">
+        <h3>Complete Payment</h3>
+        <p>Choose how you want to pay. This is a simulated flow for demonstration.</p>
+
+        <div class="payment-methods">
+          <div class="payment-method selected" onclick="selectPaymentMethod(this)">
+            <div class="icon">FW</div>
+            <div>
+              <div style="font-weight: 600;">Flutterwave</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Card, Bank, Mobile Money</div>
+            </div>
+          </div>
+          <div class="payment-method" onclick="selectPaymentMethod(this)">
+            <div class="icon">MM</div>
+            <div>
+              <div style="font-weight: 600;">Mobile Money</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">M-Pesa, MTN, Airtel, etc.</div>
+            </div>
+          </div>
+          <div class="payment-method" onclick="selectPaymentMethod(this)">
+            <div class="icon">BT</div>
+            <div>
+              <div style="font-weight: 600;">Bank Transfer</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Direct local bank transfer</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="payBtn" onclick="processPayment()">Pay Now</button>
+        <button class="btn btn-outline btn-block mt-4" onclick="closePaymentModal()">Cancel</button>
+      </div>
+
+      <!-- Step 2: Success -->
+      <div id="successStep" style="display: none; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 12px;">🎉</div>
+        <h3>Payment Successful!</h3>
+        <p>Your Bitcoin gift card is ready. Amount: <strong id="successAmount"></strong></p>
+
+        <div class="success-code" id="giftCode">AB-XXXX-XXXX-XXXX</div>
+
+        <button class="btn btn-primary btn-block" id="copyBtn" onclick="copyCode()">Copy Code</button>
+        <button class="btn btn-outline btn-block mt-4" id="emailSimBtn" onclick="simulateBuyEmail()">📧 Simulate Email Receipt</button>
+        <a href="my-cards.html" class="btn btn-outline btn-block mt-4">View My Cards</a>
+        <button class="btn btn-outline btn-block mt-4" onclick="closeSuccess()" style="margin-top: 12px;">Buy Another</button>
+        <div id="buyEmailPreview" style="display:none; margin-top:16px; text-align:left; background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:16px; font-size:0.85rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Demo Notice:</strong> No real payment is processed. Codes generated here are for demonstration only and cannot be redeemed for actual Bitcoin.
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <a href="index.html" class="logo">
+          <div class="logo-icon">₿</div>
+          AfriBit Cards
+        </a>
+        <div class="footer-links">
+          <a href="buy.html">Buy</a>
+          <a href="how-it-works.html">How It Works</a>
+          <a href="faq.html">FAQ</a>
+          <a href="my-cards.html">My Cards</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © 2026 AfriBit Cards — Demo Prototype
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

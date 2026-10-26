@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — AfriBit Cards (Demo)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-box .num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-box .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(247,147,26,0.04); }
+    .code-cell {
+      font-family: 'Space Grotesk', monospace;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-active { background: rgba(0,214,143,0.15); color: var(--success); }
+    .badge-sent { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .action-btns { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: 8px;
+    }
+    .email-preview {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      display: none;
+    }
+    .email-preview.show { display: block; }
+    .email-preview .subject {
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Simple staff login gate (demo only - not real security) -->
+  <div id="loginGate" style="position:fixed;inset:0;background:var(--bg-primary);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:40px;width:90%;max-width:400px;text-align:center;box-shadow:var(--shadow);">
+      <div class="logo" style="justify-content:center;margin-bottom:24px;">
+        <div class="logo-icon">₿</div>
+        AfriBit Staff
+      </div>
+      <h3 style="margin-bottom:8px;">Admin Access</h3>
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">For AfriBit workers and administrators only</p>
+      <input type="password" id="adminPass" class="form-control" placeholder="Enter staff password" style="margin-bottom:16px;text-align:center;" onkeydown="if(event.key==='Enter') checkAdminPass()">
+      <button class="btn btn-primary btn-block" onclick="checkAdminPass()">Unlock Dashboard</button>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:16px;">Demo password: <code style="color:var(--accent);">afribit-staff</code></p>
+      <a href="index.html" style="display:inline-block;margin-top:20px;color:var(--text-muted);font-size:0.85rem;">← Back to main site</a>
+    </div>
+  </div>
+
+  <div id="adminContent" style="display:none;">
+
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">₿</div>
+        AfriBit Cards
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="buy.html">Buy Card</a>
+        <a href="how-it-works.html">How It Works</a>
+        <a href="faq.html">FAQ</a>
+        <a href="my-cards.html">My Cards</a>
+        <a href="admin.html" class="active">Admin</a>
+      </div>
+      <button class="mobile-toggle">☰</button>
+    </div>
+  </nav>
+
+  <section class="section" style="padding-top: 40px;">
+    <div class="container">
+      <div class="admin-header">
+        <div>
+          <h2 style="margin-bottom: 4px;">Admin Dashboard</h2>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">Demo only — data stored in browser localStorage</p>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <button class="btn btn-outline btn-sm" onclick="clearAllCards()">Clear All Data</button>
+          <button class="btn btn-primary btn-sm" onclick="location.href='buy.html'">+ Issue New Card</button>
+        </div>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-box">
+          <div class="num" id="statTotal">0</div>
+          <div class="label">Total Cards</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="statActive">0</div>
+          <div class="label">Active</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="statValue">—</div>
+          <div class="label">Est. Value (demo)</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="statEmails">0</div>
+          <div class="label">Emails Simulated</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Amount</th>
+              <th>Currency</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="emailPreview" class="email-preview">
+        <div class="subject">📧 Simulated Email Preview</div>
+        <div id="emailBody"></div>
+        <button class="btn btn-outline btn-sm mt-4" onclick="document.getElementById('emailPreview').classList.remove('show')">Close Preview</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="disclaimer">
+    <strong>Admin Demo Notice:</strong> This dashboard is purely for demonstration. In a real product it would be protected by authentication, role-based access, and connected to a secure backend database.
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <a href="index.html" class="logo">
+          <div class="logo-icon">₿</div>
+          AfriBit Cards
+        </a>
+        <div class="footer-links">
+          <a href="buy.html">Buy</a>
+          <a href="how-it-works.html">How It Works</a>
+          <a href="faq.html">FAQ</a>
+          <a href="my-cards.html">My Cards</a>
+          <a href="admin.html">Admin</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © 2026 AfriBit Cards — Demo Prototype
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Extra admin logic
+    function loadAdmin() {
+      const cards = JSON.parse(localStorage.getItem('afribit_cards') || '[]');
+      const emails = parseInt(localStorage.getItem('afribit_emails') || '0');
+
+      document.getElementById('statTotal').textContent = cards.length;
+      document.getElementById('statActive').textContent = cards.filter(c => c.status === 'Active').length;
+      document.getElementById('statEmails').textContent = emails;
+
+      // Rough total value display (just count of cards for demo)
+      document.getElementById('statValue').textContent = cards.length > 0 ? cards.length + ' cards' : '—';
+
+      const tbody = document.getElementById('adminTableBody');
+      if (cards.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;">No cards issued yet. <a href="buy.html" style="color:var(--accent);">Buy one</a> to see data here.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = cards.map((c, i) => `
+        <tr>
+          <td class="code-cell">${c.code}</td>
+          <td>${Number(c.amount).toLocaleString()}</td>
+          <td>${c.currency}</td>
+          <td>${new Date(c.date).toLocaleString()}</td>
+          <td><span class="badge badge-active">${c.status}</span></td>
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-outline btn-sm" onclick="simulateEmail('${c.code}', ${c.amount}, '${c.currency}')">📧 Email</button>
+              <button class="btn btn-outline btn-sm" onclick="copyAdminCode('${c.code}')">Copy</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function simulateEmail(code, amount, currency) {
+      const cur = (typeof CURRENCIES !== 'undefined' ? CURRENCIES.find(c => c.code === currency) : null);
+      const symbol = cur ? cur.symbol : currency;
+      const formatted = symbol + ' ' + Number(amount).toLocaleString();
+
+      const body = `
+        <p><strong>To:</strong> customer@example.com</p>
+        <p><strong>From:</strong> noreply@afribit.cards</p>
+        <p><strong>Subject:</strong> Your AfriBit Bitcoin Gift Card is ready 🎁</p>
+        <hr style="border-color:var(--border);margin:16px 0;">
+        <p>Hi there,</p>
+        <p>Thank you for your purchase! Your Bitcoin gift card has been issued.</p>
+        <p><strong>Card Value:</strong> ${formatted}</p>
+        <p><strong>Gift Code:</strong></p>
+        <div style="background:rgba(247,147,26,0.1);border:1px dashed var(--accent);padding:16px;border-radius:8px;text-align:center;font-family:monospace;font-size:1.2rem;font-weight:700;color:var(--accent);letter-spacing:1px;margin:12px 0;">
+          ${code}
+        </div>
+        <p>Redeem this code on any supported crypto exchange or wallet that accepts AfriBit vouchers to receive Bitcoin.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;">This is a simulated email for demonstration purposes only.</p>
+      `;
+
+      document.getElementById('emailBody').innerHTML = body;
+      document.getElementById('emailPreview').classList.add('show');
+
+      // Increment email counter
+      let count = parseInt(localStorage.getItem('afribit_emails') || '0') + 1;
+      localStorage.setItem('afribit_emails', count);
+      document.getElementById('statEmails').textContent = count;
+    }
+
+    function copyAdminCode(code) {
+      navigator.clipboard.writeText(code).then(() => alert('Code copied: ' + code));
+    }
+
+    function clearAllCards() {
+      if (confirm('Clear all demo cards and email counters from this browser?')) {
+        localStorage.removeItem('afribit_cards');
+        localStorage.removeItem('afribit_emails');
+        loadAdmin();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAdmin);
+  </script>
+
+  </div> <!-- end adminContent -->
+
+  <script>
+    function checkAdminPass() {
+      const pass = document.getElementById('adminPass').value;
+      // Demo password - in real product this would be proper auth
+      if (pass === 'afribit-staff' || pass === 'afribit2026') {
+        sessionStorage.setItem('afribit_admin', '1');
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        if (typeof loadAdmin === 'function') loadAdmin();
+      } else {
+        alert('Incorrect password. Access restricted to AfriBit staff only.');
+      }
+    }
+    // Auto unlock if already authenticated in this session
+    if (sessionStorage.getItem('afribit_admin') === '1') {
+      document.getElementById('loginGate').style.display = 'none';
+      document.getElementById('adminContent').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
