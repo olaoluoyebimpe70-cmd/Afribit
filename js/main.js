@@ -129,6 +129,14 @@ function updateSummary() {
   set('sumBtc', `≈ ${btc} BTC`);
   set('previewAmount', formatMoney(amount, currency));
   set('previewCurrency', cur ? cur.name : currency);
+
+  // Live virtual card preview
+  const previewEl = document.getElementById('livePreview');
+  if (previewEl && amount > 0) {
+    const demoCode = 'AB-PREVIEW-CARD';
+    previewEl.innerHTML = renderVirtualCard(demoCode, amount, currency);
+    setTimeout(() => drawBarcode('barcode-ABPREVIEWCARD', demoCode), 30);
+  }
 }
 
 function openPaymentModal() {
@@ -284,6 +292,192 @@ document.addEventListener('DOMContentLoaded', () => {
   initCurrencySelect();
   initFAQ();
   loadMyCards();
+
+  const customInput = document.getElementById('customAmount');
+  if (customInput) {
+    customInput.addEventListener('input', updateSummary);
+  }
+});
+// ========== USD rates (demo static, approx mid-2026) ==========
+const USD_RATES = {
+  NGN: 0.00065, GHS: 0.065, KES: 0.0077, ZAR: 0.055,
+  UGX: 0.00027, TZS: 0.00038, RWF: 0.00072, XOF: 0.00165, USD: 1
+};
+
+function getUsdValue(amount, currency) {
+  const rate = USD_RATES[currency] || 0.001;
+  return (amount * rate).toFixed(2);
+}
+
+// ========== Beautiful Virtual Card HTML ==========
+function renderVirtualCard(code, amount, currency) {
+  const local = formatMoney(amount, currency);
+  const usd = getUsdValue(amount, currency);
+  const btc = getBtcEstimate(amount, currency);
+  return `
+    <div class="virtual-card">
+      <div class="vc-top">
+        <div class="vc-brand">
+          <div class="vc-brand-icon">₿</div>
+          AfriBit
+        </div>
+        <div class="vc-chip"></div>
+      </div>
+      <div class="vc-amount">
+        <div class="local">${local}</div>
+        <div class="usd">≈ $${usd} USD</div>
+      </div>
+      <div class="vc-code-label">Gift Code</div>
+      <div class="vc-code">${code}</div>
+      <div class="vc-barcode">
+        <svg id="barcode-${code.replace(/[^A-Z0-9]/g,'')}"></svg>
+        <div class="vc-barcode-text">${code}</div>
+      </div>
+    </div>
+  `;
+}
+
+function drawBarcode(svgId, text) {
+  // Simple pure JS barcode (Code 128-ish bars) without external lib
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const clean = text.replace(/[^A-Z0-9]/g, '');
+  let bars = '';
+  let x = 0;
+  // Start guard
+  bars += `<rect x="${x}" y="0" width="2" height="40" fill="#000"/>`; x += 3;
+  bars += `<rect x="${x}" y="0" width="1" height="40" fill="#000"/>`; x += 2;
+  for (let i = 0; i < clean.length; i++) {
+    const code = clean.charCodeAt(i);
+    const w1 = (code % 3) + 1;
+    const w2 = ((code >> 2) % 3) + 1;
+    bars += `<rect x="${x}" y="0" width="${w1}" height="40" fill="#000"/>`; x += w1 + 1;
+    bars += `<rect x="${x}" y="0" width="${w2}" height="40" fill="#000"/>`; x += w2 + 1.5;
+  }
+  // End
+  bars += `<rect x="${x}" y="0" width="1" height="40" fill="#000"/>`; x += 2;
+  bars += `<rect x="${x}" y="0" width="2" height="40" fill="#000"/>`;
+  svg.setAttribute('viewBox', `0 0 ${x + 4} 40`);
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '48');
+  svg.innerHTML = bars;
+}
+
+// Override processPayment success to use beautiful card
+const originalProcessPayment = typeof processPayment === 'function' ? processPayment : null;
+
+function processPayment() {
+  const selected = document.querySelector('.payment-method.selected');
+  if (!selected) {
+    alert('Please select a payment method');
+    return;
+  }
+
+  const btn = document.getElementById('payBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+  }
+
+  setTimeout(() => {
+    const code = generateCode();
+    const currency = document.getElementById('currency')?.value || 'NGN';
+    const amount = parseFloat(document.getElementById('customAmount')?.value) || 0;
+
+    const cards = JSON.parse(localStorage.getItem('afribit_cards') || '[]');
+    cards.unshift({
+      code,
+      amount,
+      currency,
+      date: new Date().toISOString(),
+      status: 'Active',
+      usd: getUsdValue(amount, currency)
+    });
+    localStorage.setItem('afribit_cards', JSON.stringify(cards.slice(0, 20)));
+
+    // Beautiful success UI
+    const successStep = document.getElementById('successStep');
+    if (successStep) {
+      successStep.innerHTML = `
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">🎉</div>
+        <h3 style="margin-bottom: 6px;">Your Gift Card is Ready!</h3>
+        <p style="margin-bottom: 20px;">Amount: <strong>${formatMoney(amount, currency)}</strong> ≈ $${getUsdValue(amount, currency)} USD</p>
+        
+        ${renderVirtualCard(code, amount, currency)}
+        
+        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn btn-primary btn-block" onclick="navigator.clipboard.writeText('${code}').then(()=>alert('Code copied!'))">Copy Code</button>
+          <button class="btn btn-outline btn-block" onclick="simulateBuyEmail()">📧 Simulate Email Receipt</button>
+          <a href="my-cards.html" class="btn btn-outline btn-block">View My Cards</a>
+          <button class="btn btn-outline btn-block" onclick="closeSuccess()">Buy Another</button>
+        </div>
+        <div id="buyEmailPreview" style="display:none; margin-top:16px; text-align:left; background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:16px; font-size:0.85rem;"></div>
+      `;
+      successStep.style.display = 'block';
+      document.getElementById('paymentStep').style.display = 'none';
+      
+      // Draw barcode after DOM update
+      setTimeout(() => drawBarcode('barcode-' + code.replace(/[^A-Z0-9]/g,''), code), 50);
+    }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Pay Now';
+    }
+  }, 1600);
+}
+
+// Enhanced My Cards with virtual cards
+function loadMyCards() {
+  const container = document.getElementById('cardsList');
+  if (!container) return;
+
+  const cards = JSON.parse(localStorage.getItem('afribit_cards') || '[]');
+  if (cards.length === 0) {
+    container.innerHTML = `
+      <div class="feature-card text-center" style="grid-column: 1 / -1;">
+        <div class="feature-icon">🎁</div>
+        <h3>No cards yet</h3>
+        <p>Buy your first Bitcoin gift card to see it here.</p>
+        <a href="buy.html" class="btn btn-primary mt-4">Buy a Card</a>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = cards.map(c => `
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      ${renderVirtualCard(c.code, c.amount, c.currency)}
+      <div style="text-align:center; font-size:0.8rem; color:var(--text-muted);">
+        ${new Date(c.date).toLocaleString()} · ${c.status}
+      </div>
+    </div>
+  `).join('');
+
+  // Draw all barcodes
+  setTimeout(() => {
+    cards.forEach(c => {
+      drawBarcode('barcode-' + c.code.replace(/[^A-Z0-9]/g,''), c.code);
+    });
+  }, 80);
+}
+
+// Mobile nav toggle
+function initMobileNav() {
+  const toggle = document.querySelector('.mobile-toggle');
+  const links = document.querySelector('.nav-links');
+  if (toggle && links) {
+    toggle.addEventListener('click', () => {
+      links.classList.toggle('mobile-open');
+    });
+  }
+}
+
+// Re-bind init
+document.addEventListener('DOMContentLoaded', () => {
+  initCurrencySelect();
+  initFAQ();
+  loadMyCards();
+  initMobileNav();
 
   const customInput = document.getElementById('customAmount');
   if (customInput) {
